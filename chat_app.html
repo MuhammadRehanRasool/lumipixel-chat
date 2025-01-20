@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat avec Émojis</title>
+
+    <style>
+      /* --------- RÉGLAGES GLOBAUX --------- */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+      }
+
+      /* --------- PAGE D'ENTRÉE --------- */
+      .entry-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: #f9faff;
+      }
+      .entry-box {
+        text-align: center;
+        background: white;
+        padding: 30px 40px;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        max-width: 350px;
+        width: 90%;
+      }
+      .entry-box h1 {
+        font-size: 1.8em;
+        color: #605cf6;
+        margin-bottom: 10px;
+      }
+      .entry-box p {
+        color: #888;
+        margin-bottom: 20px;
+      }
+      .entry-box p span {
+        color: #605cf6;
+        font-weight: bold;
+      }
+      .entry-box img {
+        width: 60px;
+        margin: 15px 0;
+      }
+      .entry-box input,
+      .entry-box select {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1em;
+      }
+      .entry-box button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 15px;
+        background: #605cf6;
+        color: white;
+        font-size: 1em;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .entry-box button:hover {
+        background: #4c4adb;
+      }
+
+      /* --------- CHAT PRINCIPAL --------- */
+      #mainChat.chat-hidden {
+        display: none;
+      }
+      #mainChat {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* En-tête du chat */
+      .chat-header {
+        background-color: #605cf6;
+        color: white;
+        padding: 10px;
+        font-size: 1.2em;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      /* Bouton retour (PV -> Groupe) */
+      .chat-header .back-button {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5em;
+        cursor: pointer;
+        position: absolute;
+        left: 10px;
+        top: 3px; /* ajusté */
+        display: none;
+      }
+
+      /* Bouton participants : plus haut, et ajusté pour notif plus petite */
+      .participants-button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: white;
+        position: absolute;
+        right: 10px;
+        top: -3px; /* ajusté */
+
+        /* Le burger a une taille plus petite */
+        font-size: 1.4em;
+        padding: 0.2em 0.5em;
+        border-radius: 6px;
+        transition: background-color 0.3s, color 0.3s, font-size 0.2s,
+          padding 0.2s;
+      }
+      /* Mode notif : rectangle rouge arrondi, un peu plus petit */
+      .participants-button.notif-active {
+        top: 6px;
+        background-color: red;
+        color: #fff;
+        font-weight: bold;
+        font-size: 1.1em; /* légèrement + petit */
+        padding: 0.1em 0.4em;
+        border-radius: 6px;
+      }
+
+      /* Conteneur messages */
+      .chat-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        background: #f5f5f5;
+      }
+      .message {
+        margin: 10px 0;
+        max-width: 70%;
+        padding: 10px;
+        border-radius: 10px;
+        font-size: 0.9em;
+        position: relative;
+        cursor: pointer;
+      }
+      .message.sent {
+        align-self: flex-end;
+        background-color: #d9d8f9;
+      }
+      .message.received {
+        align-self: flex-start;
+        background-color: #e0e0e0;
+      }
+      .message .username {
+        font-weight: bold;
+        font-size: 0.8em;
+        margin-bottom: 5px;
+        color: #555;
+      }
+
+      /* Barre de saisie en bas */
+      .chat-input-container {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background: #fff;
+        box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .chat-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1em;
+      }
+      .emoji-btn {
+        margin-right: 10px;
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+      }
+      .send-btn {
+        padding: 10px 15px;
+        background: #605cf6;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+        margin-left: 10px;
+      }
+      .send-btn:hover {
+        background: #4c4adb;
+      }
+
+      /* Sélecteur d'émojis */
+      .emoji-picker {
+        position: absolute;
+        bottom: 60px;
+        left: 10px;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        display: none;
+        flex-wrap: wrap;
+        max-width: 250px;
+        padding: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .emoji-picker.active {
+        display: flex;
+      }
+      .emoji-picker span {
+        font-size: 1.2em;
+        padding: 5px;
+        cursor: pointer;
+      }
+      .emoji-picker span:hover {
+        background: #f0f0f0;
+        border-radius: 5px;
+      }
+      @media screen and (max-width: 767px) {
+        .emoji-btn {
+          display: none;
+        }
+      }
+
+      /* Liste participants */
+      .participants-list {
+        position: fixed;
+        top: 0;
+        right: -220px;
+        width: 220px;
+        height: 100%;
+        background: #fff;
+        box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        transition: right 0.3s;
+      }
+      .participants-list.active {
+        right: 0;
+      }
+      .participants-items {
+        flex: 1;
+        overflow-y: auto;
+        margin-top: 60px;
+      }
+      .participant-item {
+        padding: 15px 20px;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 1em;
+        color: #333;
+        display: flex;
+        align-items: center;
+        position: relative;
+        cursor: pointer;
+      }
+      .participant-item:hover {
+        background: #f5f5f5;
+      }
+      .participant-item .notification {
+        margin-left: auto;
+        background: red;
+        color: white;
+        font-weight: bold;
+        border-radius: 50%;
+        min-width: 22px;
+        height: 22px;
+        line-height: 22px;
+        text-align: center;
+        font-size: 0.8em;
+        display: inline-block;
+        padding: 0 5px;
+      }
+      .participant-item .notification.active {
+        display: inline-block;
+      }
+
+      /* Bouton fermeture menu */
+      .close-menu {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+      }
+
+      /* Bouton quitter en bas */
+      .quit-chat-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 15px 20px;
+        border-top: 1px solid #e0e0e0;
+        cursor: pointer;
+        background: #fff;
+      }
+      .quit-chat-item:hover {
+        background: #f9dada;
+      }
+      .quit-chat-item .quit-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+      }
+      .quit-chat-item .quit-text {
+        color: #d00;
+      }
+      .notification {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- PAGE D'ENTRÉE -->
+    <div class="entry-container" id="entryContainer">
+      <div class="entry-box">
+        <h1>Salle de chat</h1>
+        <p>
+          • <span id="onlineCount">1820</span> étudiants sont en train de
+          discuter
+        </p>
+        <img src="images/img_chat_etudiant.png" alt="Chat Icon" />
+        <input type="text" id="username" placeholder="Pseudo" />
+        <select id="chatRoom"></select>
+        <button id="joinChat">Rejoindre</button>
+      </div>
+    </div>
+    <!-- FIN DE LA PAGE D'ENTRÉE -->
+
+    <!-- CHAT PRINCIPAL -->
+    <div id="mainChat" class="chat-hidden">
+      <div class="chat-header">
+        <button class="back-button" id="backButton">&#8592;</button>
+        <span id="chatTitle">Chat de Groupe</span>
+        <!-- Bouton participants => prend une forme rouge + nb si notif -->
+        <button class="participants-button" id="participantsButton">☰</button>
+      </div>
+
+      <div class="chat-container" id="chatContainer">
+        <!-- Messages seront ajoutés ici via JS -->
+      </div>
+
+      <div class="chat-input-container">
+        <button id="emojiButton" class="emoji-btn">😊</button>
+        <input
+          type="text"
+          id="chatInput"
+          class="chat-input"
+          placeholder="Tapez votre message..."
+        />
+        <button id="sendButton" class="send-btn">Envoyer</button>
+
+        <!-- Sélecteur d'émojis -->
+        <div id="emojiPicker" class="emoji-picker">
+          <!-- Émojis injectés via JS -->
+        </div>
+      </div>
+
+      <!-- Menu latéral participants -->
+      <div class="participants-list" id="participantsList">
+        <button class="close-menu" id="closeMenu">&times;</button>
+
+        <div class="participants-items" id="participantsItems">
+          <div class="participant-item" data-username="Alice">
+            Alice
+            <span class="notification" id="notif-Alice">0</span>
+          </div>
+          <div class="participant-item" data-username="Bob">
+            Bob
+            <span class="notification" id="notif-Bob">0</span>
+          </div>
+          <div class="participant-item" data-username="Charlie">
+            Charlie
+            <span class="notification" id="notif-Charlie">0</span>
+          </div>
+        </div>
+
+        <div class="quit-chat-item" id="quitChatItem">
+          <img src="images/deconnexion.png" alt="Quitter" class="quit-icon" />
+          <span class="quit-text">Deconnexion</span>
+        </div>
+      </div>
+    </div>
+    <!-- FIN DU CHAT -->
+
+    <script>
+      const SERVER_URL = "http://localhost:3000";
+    </script>
+
+    <!-- ----------------- -->
+    <!-- SOCKET CONNECTION -->
+    <!-- ----------------- -->
+    <script
+      src="https://cdn.socket.io/4.8.1/socket.io.min.js"
+      integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const socket = io(SERVER_URL);
+    </script>
+    <!-- ----------------- -->
+    <!-- SOCKET CONNECTION -->
+    <!-- ----------------- -->
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Fetch chat rooms from the API
+        fetch(SERVER_URL + "/api/rooms")
+          .then((response) => response.json())
+          .then((data) => {
+            const chatRoomSelect = document.getElementById("chatRoom");
+            chatRoomSelect.innerHTML = ""; // Clear existing options
+
+            // Populate the select element with fetched chat rooms
+            Object.keys(data).forEach((key) => {
+              const option = document.createElement("option");
+              option.value = key;
+              option.textContent = data[key];
+              chatRoomSelect.appendChild(option);
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching chat rooms:", error);
+          });
+      });
+    </script>
+    <script>
+      /*****************************************************/
+      /*                 CONSTANT VARIABLES                */
+      /*****************************************************/
+      const CONFIG = {
+        room: "room_global",
+        roomName: "Chat Global",
+        username: "",
+        privateChatUser: "",
+        isPrivate: false,
+      };
+      const CHAT = {
+        group: [],
+        private: {},
+        counters: {},
+      };
+
+      /*****************************************************/
+      /*         LOGIQUE DE LA PAGE D'ENTRÉE (JOIN)        */
+      /*****************************************************/
+      const entryContainer = document.getElementById("entryContainer");
+      const mainChat = document.getElementById("mainChat");
+      const joinChatButton = document.getElementById("joinChat");
+      const usernameInput = document.getElementById("username");
+      const chatRoomSelect = document.getElementById("chatRoom");
+      const chatTitle = document.getElementById("chatTitle");
+
+      joinChatButton.addEventListener("click", () => {
+        const username = usernameInput.value.trim();
+        if (!username) {
+          alert("Veuillez entrer un pseudo.");
+          return;
+        }
+
+        // Récupération du texte de l'option sélectionnée
+        const selectedOptionText =
+          chatRoomSelect.options[chatRoomSelect.selectedIndex].text;
+
+        // Si l'utilisateur a choisi "Toutes les Universités", on affiche "Chat Global"
+        if (chatRoomSelect.value === "room_global") {
+          chatTitle.textContent = "Chat Global";
+        } else {
+          // Sinon, on affiche "Chat " suivi de ce qui est sélectionné
+          chatTitle.textContent = "Chat " + selectedOptionText;
+        }
+        CONFIG.roomName = chatTitle.textContent;
+
+        socket.emit(
+          "joinRoom",
+          { room: chatRoomSelect.value, username: username },
+          (error) => {
+            if (error) {
+              alert(error);
+              return;
+            }
+          }
+        );
+
+        CONFIG.room = chatRoomSelect.value;
+        CONFIG.username = username;
+
+        // On masque la page d'entrée
+        entryContainer.style.display = "none";
+        mainChat.classList.remove("chat-hidden");
+      });
+
+      /*****************************************************/
+      /*                 USER LIST MANAGEMENT              */
+      /*****************************************************/
+      // Listen for users list updates
+      socket.on("users", (users) => {
+        updateParticipantsList(users);
+      });
+
+      // Update participants list
+      function updateParticipantsList(users) {
+        participantsItems.innerHTML = ""; // Clear the list
+        Object.values(users).forEach(({ username, room }) => {
+          if (username === CONFIG.username) return; // Skip current user
+          if (room === CONFIG.room) {
+            const item = document.createElement("div");
+            item.classList.add("participant-item");
+            item.setAttribute("data-username", username);
+            item.textContent = username;
+            const subItem = document.createElement("span");
+            subItem.classList.add("notification");
+            subItem.id = "notif-" + username;
+            subItem.textContent = CHAT.counters[username] || 0;
+            item.appendChild(subItem);
+            item.addEventListener("click", () => initiatePrivateChat(item));
+            participantsItems.appendChild(item);
+          }
+        });
+      }
+
+      /*****************************************************/
+      /*           LOGIQUE DU CHAT + NOTIFS BURGER         */
+      /*****************************************************/
+      const backButton = document.getElementById("backButton");
+      const participantsButton = document.getElementById("participantsButton");
+      const participantsList = document.getElementById("participantsList");
+      const participantsItems = document.getElementById("participantsItems");
+      const closeMenu = document.getElementById("closeMenu");
+      const quitChatItem = document.getElementById("quitChatItem");
+
+      const chatContainerEl = document.getElementById("chatContainer");
+      const chatInput = document.getElementById("chatInput");
+      const sendButton = document.getElementById("sendButton");
+      const emojiButton = document.getElementById("emojiButton");
+      const emojiPicker = document.getElementById("emojiPicker");
+
+      let replyTo = null;
+
+      // Ouvrir/fermer participants
+      participantsButton.addEventListener("click", () => {
+        participantsList.classList.toggle("active");
+      });
+      closeMenu.addEventListener("click", () => {
+        participantsList.classList.remove("active");
+      });
+
+      // Bouton BACK => groupe
+      backButton.addEventListener("click", () => {
+        CONFIG.isPrivate = false;
+        CONFIG.privateChatUser = "";
+        chatTitle.textContent = CONFIG.roomName;
+        loadMessages();
+        socket.emit(
+          "joinRoom",
+          { room: CONFIG.room, username: CONFIG.username },
+          (error) => {
+            if (error) {
+              alert(error);
+              return;
+            }
+          }
+        );
+        backButton.style.display = "none";
+        participantsButton.style.display = "block";
+        participantsButton.textContent = "☰"; // On remet l'icône
+        participantsButton.classList.remove("notif-active");
+
+        chatInput.placeholder = "Tapez votre message...";
+        replyTo = null;
+        loadMessages();
+      });
+
+      // Quitter
+      quitChatItem.addEventListener("click", () => {
+        socket.emit("leavePage");
+        entryContainer.style.display = "flex";
+        mainChat.classList.add("chat-hidden");
+        resetChat();
+        CONFIG.isPrivate = false;
+        CONFIG.privateChatUser = "";
+
+        loadMessages();
+        setBurgerNotification(0);
+      });
+
+      function initiatePrivateChat(item) {
+        socket.emit("leaveRoom");
+        const userName = item.getAttribute("data-username");
+        resetIncomingMessageCount(userName);
+        CONFIG.isPrivate = true;
+        CONFIG.privateChatUser = userName;
+        chatTitle.textContent = `Chat avec ${userName}`;
+        backButton.style.display = "block";
+        participantsButton.style.display = "none";
+        participantsList.classList.remove("active");
+
+        // Reset notif sur ce participant
+        const notifSpan = document.getElementById("notif-" + userName);
+        notifSpan.classList.remove("active");
+        notifSpan.textContent = "0";
+
+        loadMessages();
+        chatInput.placeholder = "Tapez votre message...";
+        replyTo = null;
+      }
+
+      // Envoyer message
+      sendButton.addEventListener("click", () => {
+        const content = chatInput.value.trim();
+        if (content === "") return;
+
+        let messageContent = content;
+        if (replyTo) {
+          messageContent = `@${replyTo}: ${content}`;
+        }
+
+        const message = {
+          username: CONFIG.username,
+          content: messageContent,
+          type: "sent",
+        };
+
+        if (!CONFIG.isPrivate) {
+          CHAT?.group?.push(message);
+          addMessageToDOM(message);
+          socket.emit("sendMessage", { room: CONFIG.room, message });
+        } else {
+          addPrivateMessage(CONFIG.privateChatUser, message);
+          addMessageToDOM(message);
+          socket.emit("privateMessage", {
+            to: CONFIG.privateChatUser,
+            message,
+          });
+        }
+
+        chatInput.value = "";
+        chatInput.placeholder = "Tapez votre message...";
+        replyTo = null;
+        chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+      });
+
+      // Listen for incoming messages
+      socket.on("message", ({ sender, message }) => {
+        let received = {
+          username: sender,
+          content: message,
+          type: "received",
+        };
+        CHAT?.group?.push(received);
+        addMessageToDOM(received);
+        chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+      });
+
+      // Listen for incoming private messages
+      socket.on("privateMessage", ({ sender, message }) => {
+        let received = {
+          username: sender,
+          content: message,
+          type: "received",
+        };
+        addPrivateMessage(sender, received);
+        if (CONFIG.privateChatUser === sender) {
+          addMessageToDOM(received);
+        } else {
+          setIncomingMessageCount(sender);
+        }
+        chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+      });
+
+      // Listen for notifications
+      socket.on("notification", (notification) => {
+        addNotificationToDOM(notification);
+      });
+
+      // Affichage message DOM
+      function addMessageToDOM(message) {
+        const msgEl = document.createElement("div");
+        msgEl.classList.add("message", message.type);
+
+        const userEl = document.createElement("div");
+        userEl.classList.add("username");
+        userEl.textContent = message.username;
+        msgEl.appendChild(userEl);
+
+        const contentEl = document.createElement("div");
+        contentEl.textContent = message.content;
+        msgEl.appendChild(contentEl);
+
+        chatContainerEl.appendChild(msgEl);
+
+        if (!CONFIG.isPrivate) {
+          msgEl.addEventListener("click", () => {
+            replyTo = message.username;
+            chatInput.placeholder = `En réponse à ${replyTo}...`;
+            chatInput.focus();
+          });
+        }
+      }
+
+      // Add a notification to the chat container
+      function addNotificationToDOM(notification) {
+        const notifEl = document.createElement("div");
+        notifEl.classList.add("notification");
+        notifEl.textContent = notification;
+        chatContainerEl.appendChild(notifEl);
+        chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+      }
+
+      function addPrivateMessage(username, message) {
+        if (!CHAT.private[username]) {
+          CHAT.private[username] = [];
+        }
+        CHAT.private[username].push(message);
+      }
+
+      // Charger
+      function loadMessages() {
+        chatContainerEl.innerHTML = "";
+        let messages = !CONFIG.isPrivate
+          ? CHAT.group
+          : getPrivateMessages(CONFIG.privateChatUser) || [];
+        messages.forEach((m) => addMessageToDOM(m));
+        chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+      }
+
+      function getPrivateMessages(username) {
+        return CHAT.private[username] || [];
+      }
+
+      // Reset CONSTANT
+      function resetChat() {
+        CONFIG.room = "room_global";
+        CONFIG.roomName = "Chat Global";
+        CONFIG.username = "";
+        CONFIG.privateChatUser = "";
+        CONFIG.isPrivate = false;
+        CHAT.group = [];
+        CHAT.private = {};
+        CHAT.counters = {};
+      }
+
+      /*****************************************************/
+      /*   GESTION DU BURGER EN MODE NOTIF (petit cadre)   */
+      /*****************************************************/
+      function updateBurgerBadge() {
+        let total = 0;
+        document
+          .querySelectorAll(".participant-item .notification")
+          .forEach((n) => {
+            total += parseInt(n.textContent) || 0;
+          });
+        setBurgerNotification(total);
+      }
+      function setBurgerNotification(total) {
+        if (!CONFIG.isPrivate) {
+          // On montre le burger seulement quand on est en groupe
+          participantsButton.style.display = "block";
+        }
+        if (total > 0) {
+          participantsButton.classList.add("notif-active");
+          participantsButton.textContent = total;
+        } else {
+          participantsButton.classList.remove("notif-active");
+          participantsButton.textContent = "☰";
+        }
+      }
+
+      function setIncomingMessageCount(username) {
+        if (!CHAT.counters[username]) {
+          CHAT.counters[username] = 0;
+        }
+        CHAT.counters[username] = CHAT.counters[username] + 1;
+        const notifSpan = document.getElementById("notif-" + username);
+        if (notifSpan) {
+          notifSpan.textContent = CHAT.counters[username];
+          notifSpan.classList.add("active");
+          updateBurgerBadge();
+        }
+      }
+
+      function resetIncomingMessageCount(username) {
+        CHAT.counters[username] = 0;
+        const notifSpan = document.getElementById("notif-" + username);
+        if (notifSpan) {
+          notifSpan.textContent = 0;
+          notifSpan.classList.remove("active");
+          updateBurgerBadge();
+        }
+      }
+
+      // Initial
+      loadMessages();
+    </script>
+    <script>
+      // Émojis
+      const emojis = [
+        "😀",
+        "😁",
+        "😂",
+        "🤣",
+        "😊",
+        "😍",
+        "😎",
+        "😢",
+        "😭",
+        "😡",
+        "👍",
+        "👎",
+        "🙏",
+        "👏",
+        "🔥",
+        "❤️",
+        "💔",
+        "🌟",
+        "🎉",
+        "💯",
+      ];
+      emojis.forEach((emoji) => {
+        const span = document.createElement("span");
+        span.textContent = emoji;
+        emojiPicker.appendChild(span);
+        span.addEventListener("click", () => {
+          chatInput.value += emoji;
+          emojiPicker.classList.remove("active");
+          chatInput.focus();
+        });
+      });
+
+      emojiButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        emojiPicker.classList.toggle("active");
+      });
+      document.addEventListener("click", (e) => {
+        if (!emojiPicker.contains(e.target) && e.target !== emojiButton) {
+          emojiPicker.classList.remove("active");
+        }
+      });
+    </script>
+  </body>
+</html>
