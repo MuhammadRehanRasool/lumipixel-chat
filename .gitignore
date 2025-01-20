@@ -24,3 +24,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.iml
+
+# Ignore package lock files
+package-lock.json
+yarn.lock
