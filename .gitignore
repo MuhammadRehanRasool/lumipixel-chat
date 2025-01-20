@@ -9,7 +9,7 @@ dist/
 build/
 
 # Ignore environment variables file
-# .env
+.env
 
 # Ignore temporary files
 *.tmp

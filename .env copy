@@ -1,0 +1,12 @@
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=0000
+DB_NAME=lumipixel
+PORT=3000
+
+DB_HOST=srv970.hstgr.io
+DB_PORT=3306
+DB_USER=u759137966_axelpixel
+DB_PASSWORD=n2twvS&7
+DB_NAME=u759137966_lumipixel
+PORT=3000
