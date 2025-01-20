@@ -10,7 +10,7 @@ build/
 
 # Ignore environment variables file
 .env
-.env copy
+.env.local
 
 # Ignore temporary files
 *.tmp
