@@ -1,19 +1,25 @@
 require("dotenv").config();
 const express = require("express");
-const http = require("http");
+const https = require("https");
+const fs = require("fs");
 const { Server } = require("socket.io");
 const db = require("./db");
 const cors = require("cors");
 
+const sslOptions = {
+  key: fs.readFileSync("/etc/letsencrypt/live/chat.lumipixel.io/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/chat.lumipixel.io/fullchain.pem"),
+};
+
 const app = express();
-const server = http.createServer(app);
+const server = https.createServer(sslOptions, app);
 const io = new Server(server, {
   cors: {
     origin: "*",
   },
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 443;
 
 // Middleware
 app.use(cors());
@@ -27,24 +33,60 @@ const sanitizeMessage = (message) =>
   message?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || "";
 
 // Fetch university names and create chat rooms
-async function initializeChatRooms() {
+async function syncChatRooms() {
   try {
+    // Fetch the latest data from the database
     const [rows] = await db.query("SELECT id, name FROM school_data;");
-    chatRooms["room_global"] = "Global";
+    const currentRooms = {};
+
+    // Create a mapping of the current database state
     rows.forEach((row) => {
       const roomName = `room_${row.name.replace(/\s+/g, "_").toLowerCase()}`;
-      chatRooms[roomName] = row.name;
+      currentRooms[roomName] = row.name;
     });
+
+    // Detect New Rooms
+    Object.keys(currentRooms).forEach((roomName) => {
+      if (!chatRooms[roomName]) {
+        console.log(`➕ New room added: "${currentRooms[roomName]}"`);
+      }
+    });
+
+    // Detect Removed Rooms
+    Object.keys(chatRooms).forEach((roomName) => {
+      if (!currentRooms[roomName] && roomName !== "room_global") {
+        console.log(`❌ Room removed: "${chatRooms[roomName]}"`);
+      }
+    });
+
+    // Detect Updated Rooms
+    Object.keys(chatRooms).forEach((roomName) => {
+      if (
+        currentRooms[roomName] &&
+        chatRooms[roomName] !== currentRooms[roomName]
+      ) {
+        console.log(
+          `✏️ Room updated: "${chatRooms[roomName]}" -> "${currentRooms[roomName]}"`
+        );
+      }
+    });
+
+    // Sync the chatRooms object
+    chatRooms = { room_global: "Global", ...currentRooms };
+
     console.log(
-      `✅ Chat rooms initialized: ${Object.keys(chatRooms).length} rooms`
+      `✅ Chat rooms synchronized: ${Object.keys(chatRooms).length} rooms`
     );
   } catch (error) {
-    console.error("❌ Error fetching school data:", error);
+    console.error("❌ Error synchronizing chat rooms:", error);
   }
 }
 
-// Initialize chat rooms at startup
-initializeChatRooms();
+// Initial sync at startup
+syncChatRooms();
+
+// Optional: Periodically sync chat rooms every 5 minutes
+setInterval(syncChatRooms, 1 * 60 * 1000);
 
 // Socket.IO logic
 io.on("connection", (socket) => {
@@ -140,7 +182,8 @@ app.get("/api/rooms", (req, res) => {
 
 // Serve chat_app.html file
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/chat_app.html");
+//  res.sendFile(__dirname + "/chat_app.html");
+res.send('Welcome to LumiPixel Chat API!');
 });
 
 // Start server
