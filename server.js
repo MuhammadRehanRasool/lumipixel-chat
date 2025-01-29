@@ -19,8 +19,12 @@ const sslOptions = {
 };
 
 if (isProduction) {
-  sslOptions.key = fs.readFileSync("path/to/local/privkey.pem");
-  sslOptions.cert = fs.readFileSync("path/to/local/fullchain.pem");
+  sslOptions.key = fs.readFileSync(
+    "/etc/letsencrypt/live/chat.lumipixel.io/privkey.pem"
+  );
+  sslOptions.cert = fs.readFileSync(
+    "/etc/letsencrypt/live/chat.lumipixel.io/fullchain.pem"
+  );
 }
 
 const app = express();
