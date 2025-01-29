@@ -23,7 +23,7 @@
         justify-content: center;
         align-items: center;
         height: 100vh;
-        background: #f9faff;
+        background: #ffffff;
       }
       .entry-box {
         text-align: center;
@@ -36,7 +36,7 @@
       }
       .entry-box h1 {
         font-size: 1.8em;
-        color: #605cf6;
+        color: #4fb0ff;
         margin-bottom: 10px;
       }
       .entry-box p {
@@ -64,7 +64,7 @@
         width: 100%;
         padding: 10px;
         margin-top: 15px;
-        background: #605cf6;
+        background: #4fb0ff;
         color: white;
         font-size: 1em;
         border: none;
@@ -221,6 +221,13 @@
         padding: 10px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
+
+      .fermer {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+      }
+
       .emoji-picker.active {
         display: flex;
       }
@@ -331,13 +338,21 @@
   <body>
     <!-- PAGE D'ENTRÉE -->
     <div class="entry-container" id="entryContainer">
+      <div class="fermer">
+        <a
+          href="oasis.php?t=<?php echo uniqid(); ?>"
+          style="text-decoration: none"
+        >
+          <img src="images/fermer_categorie1.svg" />
+        </a>
+      </div>
       <div class="entry-box">
         <h1>Salle de chat</h1>
-        <p>
+        <p style="display: none">
           • <span id="onlineCount">1820</span> étudiants sont en train de
           discuter
         </p>
-        <img src="images/img_chat_etudiant.png" alt="Chat Icon" />
+        <img src="images/fais_toi_des_potes.png" alt="Chat Icon" />
         <input type="text" id="username" placeholder="Pseudo" />
         <select id="chatRoom"></select>
         <button id="joinChat">Rejoindre</button>
@@ -394,7 +409,6 @@
         </div>
 
         <div class="quit-chat-item" id="quitChatItem">
-          <img src="images/deconnexion.png" alt="Quitter" class="quit-icon" />
           <span class="quit-text">Deconnexion</span>
         </div>
       </div>
@@ -402,12 +416,14 @@
     <!-- FIN DU CHAT -->
 
     <script>
-      const SERVER_URL = "https://193.203.190.19:3000";
+      // const SERVER_URL = "https://chat.lumipixel.io";
+      // const SERVER_URL = "http://localhost:3000";
+      const SERVER_URL = "http://192.168.100.109:3000";
     </script>
 
-    <!-- ----------------- -->
+    <!-- xxxxxxxxxxxxxxxxx -->
     <!-- SOCKET CONNECTION -->
-    <!-- ----------------- -->
+    <!-- xxxxxxxxxxxxxxxxx -->
     <script
       src="https://cdn.socket.io/4.8.1/socket.io.min.js"
       integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
@@ -416,9 +432,9 @@
     <script>
       const socket = io(SERVER_URL);
     </script>
-    <!-- ----------------- -->
+    <!-- xxxxxxxxxxxxxxxxx -->
     <!-- SOCKET CONNECTION -->
-    <!-- ----------------- -->
+    <!-- xxxxxxxxxxxxxxxxx -->
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -469,7 +485,9 @@
       const chatRoomSelect = document.getElementById("chatRoom");
       const chatTitle = document.getElementById("chatTitle");
 
-      joinChatButton.addEventListener("click", () => {
+      usernameInput.focus();
+
+      function handleJoinButton() {
         const username = usernameInput.value.trim();
         if (!username) {
           alert("Veuillez entrer un pseudo.");
@@ -506,6 +524,16 @@
         // On masque la page d'entrée
         entryContainer.style.display = "none";
         mainChat.classList.remove("chat-hidden");
+      }
+
+      joinChatButton.addEventListener("click", () => {
+        handleJoinButton();
+      });
+
+      usernameInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+          handleJoinButton();
+        }
       });
 
       /*****************************************************/
@@ -569,16 +597,16 @@
         CONFIG.privateChatUser = "";
         chatTitle.textContent = CONFIG.roomName;
         loadMessages();
-        socket.emit(
-          "joinRoom",
-          { room: CONFIG.room, username: CONFIG.username },
-          (error) => {
-            if (error) {
-              alert(error);
-              return;
-            }
-          }
-        );
+        // socket.emit(
+        //   "joinRoom",
+        //   { room: CONFIG.room, username: CONFIG.username },
+        //   (error) => {
+        //     if (error) {
+        //       alert(error);
+        //       return;
+        //     }
+        //   }
+        // );
         backButton.style.display = "none";
         participantsButton.style.display = "block";
         participantsButton.textContent = "☰"; // On remet l'icône
@@ -602,8 +630,12 @@
         setBurgerNotification(0);
       });
 
+      socket.on("disconnect", () => {
+        location.reload();
+      });
+
       function initiatePrivateChat(item) {
-        socket.emit("leaveRoom");
+        // socket.emit("leaveRoom");
         const userName = item.getAttribute("data-username");
         resetIncomingMessageCount(userName);
         CONFIG.isPrivate = true;
@@ -623,8 +655,7 @@
         replyTo = null;
       }
 
-      // Envoyer message
-      sendButton.addEventListener("click", () => {
+      function handleSendMessageButton() {
         const content = chatInput.value.trim();
         if (content === "") return;
 
@@ -656,6 +687,17 @@
         chatInput.placeholder = "Tapez votre message...";
         replyTo = null;
         chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+      }
+
+      // Envoyer message
+      sendButton.addEventListener("click", () => {
+        handleSendMessageButton();
+      });
+
+      chatInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+          handleSendMessageButton();
+        }
       });
 
       // Listen for incoming messages
@@ -666,7 +708,9 @@
           type: "received",
         };
         CHAT?.group?.push(received);
-        addMessageToDOM(received);
+        if (!CONFIG?.isPrivate) {
+          addMessageToDOM(received);
+        }
         chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
       });
 
@@ -688,7 +732,9 @@
 
       // Listen for notifications
       socket.on("notification", (notification) => {
-        addNotificationToDOM(notification);
+        if (!CONFIG.isPrivate) {
+          addNotificationToDOM(notification);
+        }
       });
 
       // Affichage message DOM
@@ -828,12 +874,37 @@
         "🙏",
         "👏",
         "🔥",
-        "❤️",
         "💔",
-        "🌟",
         "🎉",
         "💯",
+        "✨",
+        "😅",
+        "🙌",
+        "😇",
+        "🤔",
+        "🤗",
+        "😜",
+        "🤷",
+        "💪",
+        "🙈",
+        "🙉",
+        "🙊",
+        "😐",
+        "😶",
+        "😏",
+        "😴",
+        "😷",
+        "🤒",
+        "🤕",
+        "🤑",
+        "👻",
+        "🎃",
+        "😺",
+        "😸",
+        "😹",
+        "😻",
       ];
+
       emojis.forEach((emoji) => {
         const span = document.createElement("span");
         span.textContent = emoji;

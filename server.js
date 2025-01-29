@@ -1,18 +1,35 @@
 require("dotenv").config();
 const express = require("express");
 const https = require("https");
+const http = require("http");
 const fs = require("fs");
 const { Server } = require("socket.io");
 const db = require("./db");
 const cors = require("cors");
 
+const isProduction = process.env.IS_PRODUCTION === "true";
+
+console.log(
+  !isProduction ? "Running in local mode" : "Running in production mode"
+);
+
 const sslOptions = {
-  key: fs.readFileSync("/etc/letsencrypt/live/chat.lumipixel.io/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/chat.lumipixel.io/fullchain.pem"),
+  key: "",
+  cert: "",
 };
 
+if (isProduction) {
+  sslOptions.key = fs.readFileSync("path/to/local/privkey.pem");
+  sslOptions.cert = fs.readFileSync("path/to/local/fullchain.pem");
+}
+
 const app = express();
-const server = https.createServer(sslOptions, app);
+let server = null;
+if (isProduction) {
+  server = https.createServer(sslOptions, app);
+} else {
+  server = http.createServer(app);
+}
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -182,8 +199,8 @@ app.get("/api/rooms", (req, res) => {
 
 // Serve chat_app.html file
 app.get("/", (req, res) => {
-//  res.sendFile(__dirname + "/chat_app.html");
-res.send('Welcome to LumiPixel Chat API!');
+  //  res.sendFile(__dirname + "/chat_app.html");
+  res.send("Welcome to LumiPixel Chat API!");
 });
 
 // Start server

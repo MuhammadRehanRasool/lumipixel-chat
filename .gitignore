@@ -28,3 +28,5 @@ Thumbs.db
 # Ignore package lock files
 package-lock.json
 yarn.lock
+
+me.md
