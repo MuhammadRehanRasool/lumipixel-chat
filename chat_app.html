@@ -622,6 +622,7 @@
         socket.emit("leavePage");
         entryContainer.style.display = "flex";
         mainChat.classList.add("chat-hidden");
+        participantsList.classList.remove("active");
         resetChat();
         CONFIG.isPrivate = false;
         CONFIG.privateChatUser = "";
